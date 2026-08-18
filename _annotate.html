@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>minimap annotation</title>
+<style>
+  body { background:#111; color:#eee; font-family:sans-serif; padding:20px; }
+  h1 { font-size:16px; }
+  .ctrl { margin:10px 0; position:sticky; top:0; background:#111; padding:10px; z-index:5; border-bottom:1px solid #333; }
+  .cell { margin:30px 0; }
+  .cap { font-size:14px; font-weight:bold; margin-bottom:8px; letter-spacing:1px; }
+  .frame { position:relative; display:inline-block; line-height:0; border:1px solid #444; user-select:none; }
+  .frame img { display:block; max-width:640px; height:auto; }
+  .mark { position:absolute; width:12px; height:12px; border-radius:50%; background:rgba(255,70,85,0.9); transform:translate(-50%,-50%); border:2px solid #fff; pointer-events:none; }
+  .mark::after { content:attr(data-id); position:absolute; left:14px; top:-2px; font-size:11px; color:#fff; background:#000; padding:1px 4px; }
+  textarea { width:100%; height:120px; background:#000; color:#0f0; font-family:monospace; font-size:12px; }
+</style>
+</head>
+<body>
+<h1>Annotate plant sites — click A/B/C site centers in order. Ctrl+click = clear last mark.</h1>
+<div class="ctrl">
+  <button id="copy">复制 JSON</button>
+  <button id="clearAll">清空全部</button>
+</div>
+<div id="root"></div>
+<textarea id="out" readonly></textarea>
+<script>
+  const maps = ['ascent','haven','bind','breeze','icebox','fracture','pearl','lotus','sunset','abyss','corrode','summit','split'];
+  const root = document.getElementById('root');
+  const out = document.getElementById('out');
+  const store = {}; // id -> {w,h, marks:[{x,y,normX,normY}]}
+
+  function render(m) {
+    const cell = document.createElement('div'); cell.className='cell';
+    const cap = document.createElement('div'); cap.className='cap'; cap.textContent = m.toUpperCase();
+    const frame = document.createElement('div'); frame.className='frame';
+    const img = document.createElement('img'); img.src = 'assets/_crop/'+m+'.png';
+    frame.appendChild(img);
+    cell.appendChild(cap); cell.appendChild(frame);
+    root.appendChild(cell);
+
+    img.addEventListener('load', () => {
+      store[m] = { w: img.naturalWidth, h: img.naturalHeight, marks: [] };
+      cap.textContent = m.toUpperCase() + '  (' + img.naturalWidth + 'x' + img.naturalHeight + ')';
+    });
+
+    frame.addEventListener('mousedown', (e) => {
+      const r = frame.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width;
+      const py = (e.clientY - r.top) / r.height;
+      const sx = e.clientX - r.left, sy = e.clientY - r.top;
+      if (e.ctrlKey) { frame.querySelector('.mark:last-child')?.remove(); if(store[m]) store[m].marks.pop(); renderJson(); return; }
+      const d = store[m];
+      const mk = document.createElement('div'); mk.className='mark';
+      mk.style.left = (px*100)+'%'; mk.style.top = (py*100)+'%';
+      mk.dataset.id = String.fromCharCode(65 + d.marks.length);
+      frame.appendChild(mk);
+      d.marks.push({ normX: +px.toFixed(4), normY: +py.toFixed(4), px: Math.round(sx/r.width*d.w), py: Math.round(sy/r.height*Math.round(d.h)) });
+      renderJson();
+    });
+  }
+  maps.forEach(render);
+
+  function renderJson() {
+    const o = {};
+    for (const m of maps) if (store[m]) o[m] = store[m];
+    out.value = JSON.stringify(o, null, 1);
+  }
+  document.getElementById('copy').addEventListener('click', () => { navigator.clipboard.writeText(out.value); });
+  document.getElementById('clearAll').addEventListener('click', () => { for (const m of maps) { store[m] = store[m] ? {...store[m], marks:[]} : store[m]; } document.querySelectorAll('.mark').forEach(x=>x.remove()); renderJson(); });
+</script>
+</body>
+</html>

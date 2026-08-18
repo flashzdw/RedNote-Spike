@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>无畏契约 · 爆能器爆炸范围测算</title>
+<style>
+  :root {
+    --bg: #0f1923;
+    --bg-deep: #0b1118;
+    --panel: rgba(18, 28, 39, 0.82);
+    --panel-line: #2c3b4b;
+    --red: #ff4655;
+    --red-dim: #b32a37;
+    --white: #ece8e1;
+    --muted: #8fa0b0;
+    --cyan: #4ab7c4;
+    --cyan-dim: rgba(74, 183, 196, 0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    color: var(--white);
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(255, 70, 85, 0.12), transparent 60%),
+      radial-gradient(900px 500px at 85% 110%, rgba(74, 183, 196, 0.10), transparent 60%),
+      linear-gradient(180deg, #101b26 0%, var(--bg) 40%, var(--bg-deep) 100%);
+    background-attachment: fixed;
+    min-height: 100%;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(circle at 50% 30%, #000 0%, transparent 85%);
+    z-index: 0;
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; opacity: 0.5;
+    background-image: repeating-conic-gradient(rgba(255,255,255,0.008) 0 25%, transparent 0 50%);
+    background-size: 3px 3px; z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 22px clamp(14px, 3vw, 30px) 40px; }
+
+  header { margin-bottom: 18px; }
+  .kicker {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-weight: 900; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--red); font-size: 12px;
+    border: 1px solid rgba(255,70,85,0.5); padding: 5px 12px;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    background: rgba(255,70,85,0.08);
+  }
+  .kicker::before { content: ""; width: 7px; height: 7px; background: var(--red); transform: rotate(45deg); }
+
+  h1 { margin-top: 12px; font-weight: 900; font-size: clamp(26px, 4vw, 40px); letter-spacing: 1px; line-height: 1.05; }
+  h1 .en { color: #fff; }
+  h1 .accent { color: var(--red); }
+  .sub { margin-top: 8px; color: var(--muted); font-size: 14px; }
+
+  .map-select { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 16px; }
+  .chip {
+    cursor: pointer; user-select: none;
+    border: 1px solid var(--panel-line); background: var(--panel); color: var(--white);
+    padding: 8px 14px; font-weight: 700; font-size: 13px; letter-spacing: 0.5px;
+    clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+    transition: all .15s ease;
+  }
+  .chip small { display: block; font-size: 10px; font-weight: 500; color: var(--muted); letter-spacing: 1px; }
+  .chip:hover { border-color: var(--muted); }
+  .chip.active {
+    background: var(--red); border-color: var(--red); color: #fff;
+    box-shadow: 0 0 0 1px var(--red), 0 0 22px rgba(255,70,85,0.45);
+  }
+  .chip.active small { color: rgba(255,255,255,0.85); }
+
+  .workspace { display: grid; grid-template-columns: 1fr 318px; gap: 16px; align-items: start; }
+  @media (max-width: 880px) { .workspace { grid-template-columns: 1fr; } }
+
+  .stage {
+    position: relative; border: 1px solid var(--panel-line); background: var(--bg-deep);
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%); overflow: hidden;
+  }
+  .stage::after {
+    content: ""; position: absolute; top: 0; right: 0; width: 20px; height: 20px;
+    background: var(--red); clip-path: polygon(0 0, 100% 100%, 0 100%);
+  }
+  svg.map { display: block; width: 100%; height: auto; }
+
+  .zone {
+    fill: rgba(74, 183, 196, 0.16); stroke: rgba(74, 183, 196, 0.85);
+    stroke-width: 1.6; stroke-dasharray: 5 4; cursor: crosshair; transition: fill .15s ease;
+  }
+  .zone:hover { fill: rgba(74, 183, 196, 0.34); }
+  .site-letter { fill: #fff; font-weight: 900; paint-order: stroke; stroke: rgba(0,0,0,0.55); stroke-width: 3px; }
+
+  .explode-fill { fill: rgba(0,0,0,0.5); }
+  .explode-ring { fill: none; stroke: var(--red); stroke-width: 2.5; }
+  .radius-line { stroke: #fff; stroke-width: 1.4; stroke-dasharray: 4 3; }
+  .radius-label { fill: var(--red); font-weight: 900; paint-order: stroke; stroke: rgba(0,0,0,0.6); stroke-width: 3px; }
+
+  .scale-line { stroke: var(--white); stroke-width: 1.6; }
+  .scale-tick { stroke: var(--white); stroke-width: 1.4; }
+  .scale-label { fill: var(--white); font-weight: 700; }
+
+  .panel { display: flex; flex-direction: column; gap: 14px; }
+  .card {
+    border: 1px solid var(--panel-line); background: var(--panel);
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%); padding: 14px;
+  }
+  .card h2 {
+    font-size: 12px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .card h2::before { content: ""; width: 10px; height: 10px; background: var(--red); transform: rotate(45deg); }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat {
+    border: 1px solid rgba(236,232,225,0.10); background: rgba(0,0,0,0.22); padding: 11px 12px;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  }
+  .stat .v { font-size: 22px; font-weight: 900; color: #fff; line-height: 1; }
+  .stat .v em { font-style: normal; font-size: 12px; color: var(--red); margin-left: 2px; }
+  .stat .k { font-size: 11px; color: var(--muted); margin-top: 5px; }
+  .stat.hl { border-color: var(--red); box-shadow: inset 0 0 0 1px rgba(255,70,85,0.25), 0 0 18px rgba(255,70,85,0.15); }
+  .stat.hl .v { color: var(--red); }
+
+  .status { min-height: 52px; display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--white); }
+  .status .dot { width: 10px; height: 10px; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+  .status.warn .dot { background: var(--red); box-shadow: 0 0 10px var(--red); }
+
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn {
+    cursor: pointer; border: 1px solid var(--red); background: var(--red); color: #fff;
+    font-weight: 900; letter-spacing: 1px; font-size: 14px; padding: 13px 10px;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    transition: all .15s ease;
+  }
+  .btn:hover { box-shadow: 0 0 20px rgba(255,70,85,0.55); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+  .btn.ghost { background: transparent; border-color: var(--panel-line); color: var(--white); }
+  .btn.ghost:hover { border-color: var(--muted); box-shadow: none; }
+
+  .note { font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .note b { color: var(--white); }
+
+  footer { margin-top: 20px; font-size: 12px; color: var(--muted); line-height: 1.8; }
+  footer .sep { color: var(--red); margin: 0 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="kicker">VALORANT · TACTICAL TOOL</span>
+    <h1><span class="en">SPIKE</span> <span class="accent">爆能器</span> 爆炸范围测算</h1>
+    <p class="sub">选择地图 → 在可下包区域选择安装点 → 模拟爆炸 → 查看半径 <b style="color:var(--red)">35m</b> 的爆炸范围</p>
+  </header>
+
+  <div class="map-select" id="mapChips"></div>
+
+  <div class="workspace">
+    <div class="stage" id="stage">
+      <svg class="map" id="map"></svg>
+    </div>
+
+    <aside class="panel">
+      <div class="card">
+        <h2>官方数据</h2>
+        <div class="stat-grid">
+          <div class="stat hl"><div class="v">35<em>m</em></div><div class="k">爆炸半径</div></div>
+          <div class="stat hl"><div class="v">999<em>伤</em></div><div class="k">范围内即死</div></div>
+          <div class="stat"><div class="v">45<em>s</em></div><div class="k">充能时间</div></div>
+          <div class="stat"><div class="v">4<em>s</em></div><div class="k">安装时间</div></div>
+          <div class="stat"><div class="v">7<em>s</em></div><div class="k">拆除时间</div></div>
+          <div class="stat"><div class="v">7<em>s</em></div><div class="k">爆炸前提示</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>当前状态</h2>
+        <div class="status" id="status"><span class="dot"></span><span id="statusText">请在下包区域点击选择安装点</span></div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="btnSim">模拟爆炸</button>
+        <button class="btn ghost" id="btnReset">重置</button>
+      </div>
+
+      <div class="card">
+        <h2>说明</h2>
+        <div class="note">
+          爆炸范围为以安装点为球心的<b>球形</b>，此处以<b>俯视正圆（半径 35m）</b>示意；游戏中该范围<b>受墙体 / 掩体遮挡</b>。<br><br>
+          地图为<b>官方俯视小地图</b>；下包区域为<b>站点示意图</b>，非精确坐标；比例尺为<b>近似值</b>，用于示意 35m 半径的相对范围。
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    数据来源：官方中文百科（爆能器，半径 35m / 999 伤害 / 45s / 4s / 7s）<span class="sep">|</span> 地图：13 张官方标准地图俯视小地图
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+/* ===================== 工具函数 ===================== */
+function rz(cx, cy, w, h) {
+  const x = cx - w / 2, y = cy - h / 2;
+  return [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+}
+function polyStr(path) { return path.map(p => p[0] + "," + p[1]).join(" "); }
+function inPoly(px, py, path) {
+  let inside = false;
+  for (let i = 0, j = path.length - 1; i < path.length; j = i++) {
+    const xi = path[i][0], yi = path[i][1], xj = path[j][0], yj = path[j][1];
+    if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+
+/* ===================== 地图数据（13 张） ===================== */
+// W/H：小地图裁剪后像素尺寸；worldW：该图横向对应的近似米数（用于比例尺）；
+// sites：包点/站点，cx/cy 为归一化中心（0~1，进攻方出生点在图下方），zw/zh 为归一化区域尺寸。
+const MAPS = [
+  { id:"ascent", zh:"亚海悬城", en:"Ascent", loc:"意大利·威尼斯", W:1900, H:1780, worldW:92,
+    img:"{{IMG_ascent}}",
+    sites:[{s:"A",cx:0.30,cy:0.26},{s:"B",cx:0.70,cy:0.26}] },
+  { id:"bind", zh:"源工重镇", en:"Bind", loc:"摩洛哥·拉巴特", W:1838, H:1937, worldW:92,
+    img:"{{IMG_bind}}",
+    sites:[{s:"A",cx:0.26,cy:0.50},{s:"B",cx:0.74,cy:0.50}] },
+  { id:"split", zh:"霓虹町", en:"Split", loc:"日本·东京", W:1788, H:1901, worldW:82,
+    img:"{{IMG_split}}",
+    sites:[{s:"A",cx:0.44,cy:0.22},{s:"B",cx:0.70,cy:0.66}] },
+  { id:"haven", zh:"隐世修所", en:"Haven", loc:"不丹·廷布", W:1913, H:1717, worldW:130,
+    img:"{{IMG_haven}}",
+    sites:[{s:"A",cx:0.22,cy:0.68},{s:"B",cx:0.50,cy:0.26},{s:"C",cx:0.78,cy:0.50}] },
+  { id:"icebox", zh:"极地寒港", en:"Icebox", loc:"俄罗斯·本内特岛", W:1920, H:1694, worldW:112,
+    img:"{{IMG_icebox}}",
+    sites:[{s:"A",cx:0.30,cy:0.24},{s:"B",cx:0.66,cy:0.52}] },
+  { id:"breeze", zh:"微风岛屿", en:"Breeze", loc:"百慕大三角", W:960, H:942, worldW:150,
+    img:"{{IMG_breeze}}",
+    sites:[{s:"A",cx:0.24,cy:0.32},{s:"B",cx:0.76,cy:0.42}] },
+  { id:"fracture", zh:"裂变峡谷", en:"Fracture", loc:"美国·新墨西哥", W:1850, H:1762, worldW:120,
+    img:"{{IMG_fracture}}",
+    sites:[{s:"A",cx:0.30,cy:0.50},{s:"B",cx:0.72,cy:0.50}] },
+  { id:"pearl", zh:"深海明珠", en:"Pearl", loc:"葡萄牙·里斯本", W:1016, H:950, worldW:105,
+    img:"{{IMG_pearl}}",
+    sites:[{s:"A",cx:0.28,cy:0.34},{s:"B",cx:0.70,cy:0.58}] },
+  { id:"lotus", zh:"莲华古城", en:"Lotus", loc:"印度·西高止山脉", W:898, H:798, worldW:140,
+    img:"{{IMG_lotus}}",
+    sites:[{s:"A",cx:0.50,cy:0.20},{s:"B",cx:0.80,cy:0.46},{s:"C",cx:0.20,cy:0.46}] },
+  { id:"sunset", zh:"日落之城", en:"Sunset", loc:"美国·洛杉矶", W:1897, H:2006, worldW:95,
+    img:"{{IMG_sunset}}",
+    sites:[{s:"A",cx:0.70,cy:0.30},{s:"B",cx:0.30,cy:0.30}] },
+  { id:"abyss", zh:"深渊", en:"Abyss", loc:"挪威·扬马延岛", W:962, H:997, worldW:118,
+    img:"{{IMG_abyss}}",
+    sites:[{s:"A",cx:0.32,cy:0.28},{s:"B",cx:0.70,cy:0.30}] },
+  { id:"corrode", zh:"盐海矿镇", en:"Corrode", loc:"法国·圣米歇尔山", W:1953, H:1724, worldW:100,
+    img:"{{IMG_corrode}}",
+    sites:[{s:"A",cx:0.28,cy:0.40},{s:"B",cx:0.72,cy:0.40}] },
+  { id:"summit", zh:"天枢云阙", en:"Summit", loc:"中国·张家界", W:1962, H:1976, worldW:98,
+    img:"{{IMG_summit}}",
+    sites:[{s:"A",cx:0.30,cy:0.40},{s:"B",cx:0.70,cy:0.40}] },
+];
+
+const BLAST_R = 35; // 官方爆炸半径（米）
+
+// 每个站点区域（像素矩形）
+function siteRect(m, site) {
+  const zw = m.W * 0.13, zh = m.H * 0.15;
+  const cx = site.cx * m.W, cy = site.cy * m.H;
+  return rz(cx, cy, zw, zh);
+}
+
+/* ===================== 全局状态 ===================== */
+const svg = document.getElementById("map");
+const stage = document.getElementById("stage");
+const statusEl = document.getElementById("status");
+const statusText = document.getElementById("statusText");
+const btnSim = document.getElementById("btnSim");
+const btnReset = document.getElementById("btnReset");
+const chipsWrap = document.getElementById("mapChips");
+
+const state = {
+  map: MAPS[0],
+  spike: null,        // {x, y} 像素
+  phase: "idle",      // idle | planted | animating | done
+  simStart: 0,
+  raf: 0,
+};
+
+/* ===================== UI 初始化 ===================== */
+function buildChips() {
+  chipsWrap.innerHTML = "";
+  MAPS.forEach(m => {
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.innerHTML = m.zh + "<small>" + m.en.toUpperCase() + "</small>";
+    b.addEventListener("click", () => selectMap(m));
+    chipsWrap.appendChild(b);
+  });
+}
+function refreshChips() {
+  [...chipsWrap.children].forEach((el, i) => el.classList.toggle("active", MAPS[i].id === state.map.id));
+}
+function selectMap(m) {
+  stopSim();
+  state.map = m;
+  state.spike = null;
+  state.phase = "idle";
+  refreshChips();
+  setStatus("请在可下包区域点击选择安装点", false);
+  draw();
+}
+
+function setStatus(text, warn) {
+  statusText.textContent = text;
+  statusEl.classList.toggle("warn", !!warn);
+}
+
+/* ===================== 交互 ===================== */
+svg.addEventListener("click", (e) => {
+  if (state.phase === "animating") return;
+  const m = state.map;
+  const rect = svg.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width * m.W;
+  const y = (e.clientY - rect.top) / rect.height * m.H;
+  let hit = null;
+  for (const s of m.sites) {
+    if (inPoly(x, y, siteRect(m, s))) { hit = s; break; }
+  }
+  if (!hit) { setStatus("请在下包区域内选择安装点", true); return; }
+  state.spike = { x, y };
+  state.phase = "planted";
+  setStatus("已选择安装点（" + hit.s + " 区）· 点击「模拟爆炸」查看范围", false);
+  draw();
+});
+
+btnSim.addEventListener("click", () => {
+  if (state.phase === "animating") return;
+  if (!state.spike) { setStatus("请先在可下包区域内选择安装点", true); return; }
+  startSim();
+});
+
+btnReset.addEventListener("click", () => {
+  stopSim();
+  state.spike = null;
+  state.phase = "idle";
+  setStatus("请在可下包区域点击选择安装点", false);
+  draw();
+});
+
+/* ===================== 动画 ===================== */
+function startSim() {
+  stopSim();
+  state.phase = "animating";
+  state.simStart = performance.now();
+  state.raf = requestAnimationFrame(tick);
+}
+function stopSim() { if (state.raf) { cancelAnimationFrame(state.raf); state.raf = 0; } }
+
+function tick(now) {
+  const t = now - state.simStart;
+  if (t < 6000) {
+    updateStatusDuringAnim(t);
+    state.raf = requestAnimationFrame(tick);
+  } else {
+    state.phase = "done";
+    setStatus("爆炸完成！半径 35m 范围内（不分阵营）999 伤害即死", true);
+  }
+  draw();
+}
+
+function updateStatusDuringAnim(t) {
+  if (t < 500) setStatus("正在安装爆能器（4s）…", true);
+  else if (t < 4000) {
+    const remain = Math.ceil(45 - (t - 500) / 3500 * 38);
+    setStatus("充能中 · 剩余 " + remain + "s", false);
+  } else if (t < 5000) {
+    const remain = Math.max(0, Math.ceil(7 - (t - 4000) / 1000 * 7));
+    setStatus("即将引爆 · 剩余 " + remain + "s（白圈收缩中）", true);
+  } else {
+    setStatus("引爆！黑色球形冲击波扩张中…", true);
+  }
+}
+
+/* ===================== 渲染 ===================== */
+function draw() {
+  const m = state.map;
+  const W = m.W, H = m.H;
+  const mpp = m.W / m.worldW;      // 每像素对应米数
+  const blastPx = BLAST_R / mpp;   // 35m 半径对应的像素
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+  let s = "";
+  // 官方小地图底图
+  s += '<image href="' + m.img + '" x="0" y="0" width="' + W + '" height="' + H + '"/>';
+
+  // 站点（可下包区域）
+  m.sites.forEach(site => {
+    const r = siteRect(m, site);
+    s += '<polygon class="zone" vector-effect="non-scaling-stroke" points="' + polyStr(r) + '"/>';
+  });
+  m.sites.forEach(site => {
+    const cx = site.cx * W, cy = site.cy * H;
+    const fs = Math.min(W, H) * 0.06;
+    s += '<text class="site-letter" x="' + cx + '" y="' + (cy + fs * 0.36) + '" font-size="' + fs + '" text-anchor="middle">' + site.s + '</text>';
+  });
+
+  // 安装点标记 + 爆炸范围
+  if (state.spike) {
+    s += spikeMarkup(state.spike, m);
+    if (state.phase === "done") s += explosionMarkup(state.spike, m, blastPx);
+  }
+  if (state.phase === "animating") s += animMarkup(state, m, blastPx);
+
+  // 比例尺
+  s += scaleBar(m, mpp);
+
+  svg.innerHTML = s;
+}
+
+function spikeMarkup(p, m) {
+  const mini = Math.min(m.W, m.H);
+  const sz = mini * 0.02;
+  const glow = sz * 3.2;
+  return '<g>'
+    + '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + glow + '" fill="rgba(255,70,85,0.25)"/>'
+    + '<polygon transform="translate(' + p.x + ',' + p.y + ')" points="0,' + (-sz) + ' ' + (-sz * 0.82) + ',' + (sz * 0.74) + ' ' + (sz * 0.82) + ',' + (sz * 0.74) + '" fill="#ff4655" stroke="#fff" stroke-width="0.5" vector-effect="non-scaling-stroke"/>'
+    + '</g>';
+}
+
+function explosionMarkup(p, m, blastPx) {
+  let s = '<circle class="explode-fill" cx="' + p.x + '" cy="' + p.y + '" r="' + blastPx + '"/>'
+    + '<circle class="explode-ring" vector-effect="non-scaling-stroke" cx="' + p.x + '" cy="' + p.y + '" r="' + blastPx + '"/>';
+
+  // 半径标注（选择空间较大的方向）
+  const dirs = [[0, -1], [0, 1], [1, 0], [-1, 0]];
+  let dir = [1, 0];
+  for (const d of dirs) {
+    const ex = p.x + d[0] * blastPx, ey = p.y + d[1] * blastPx;
+    if (ex > 10 && ex < m.W - 10 && ey > 10 && ey < m.H - 10) { dir = d; break; }
+  }
+  const ex = p.x + dir[0] * blastPx, ey = p.y + dir[1] * blastPx;
+  s += '<line class="radius-line" vector-effect="non-scaling-stroke" x1="' + p.x + '" y1="' + p.y + '" x2="' + ex + '" y2="' + ey + '"/>';
+  const lx = p.x + dir[0] * blastPx * 0.5, ly = p.y + dir[1] * blastPx * 0.5;
+  const fs = Math.min(m.W, m.H) * 0.027;
+  s += '<text class="radius-label" x="' + lx + '" y="' + ly + '" font-size="' + fs + '" text-anchor="middle">35m · 999</text>';
+  return s;
+}
+
+function animMarkup(state, m, blastPx) {
+  const p = state.spike;
+  if (!p) return "";
+  const now = performance.now();
+  const t = now - state.simStart;
+  const mini = Math.min(m.W, m.H);
+  let s = "";
+
+  if (t >= 500 && t < 4000) {
+    const remain = 45 - (t - 500) / 3500 * 38;
+    const period = 80 + remain * 20;
+    const ph = ((t - 500) % period) / period;
+    const r = mini * 0.02 * (1 + ph * 1.6);
+    s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + r + '" fill="none" stroke="rgba(255,70,85,' + (0.9 - ph * 0.6) + ')" stroke-width="1.5" vector-effect="non-scaling-stroke"/>';
+  }
+  if (t >= 4000 && t < 5000) {
+    const remain7 = 7 - (t - 4000) / 1000 * 7;
+    const r = Math.max(0.5, remain7 / 7 * (mini * 0.32));
+    s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + r + '" fill="none" stroke="rgba(236,232,225,0.9)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>';
+  }
+  if (t >= 5000 && t < 5800) {
+    const k = (t - 5000) / 800;
+    const r = k * blastPx;
+    s += '<circle class="explode-fill" cx="' + p.x + '" cy="' + p.y + '" r="' + r + '"/>'
+      + '<circle class="explode-ring" vector-effect="non-scaling-stroke" cx="' + p.x + '" cy="' + p.y + '" r="' + r + '"/>';
+  }
+  if (t >= 5800) {
+    const fs = mini * 0.07;
+    s += '<text class="radius-label" x="' + p.x + '" y="' + p.y + '" font-size="' + fs + '" text-anchor="middle">999</text>';
+  }
+  return s;
+}
+
+function scaleBar(m, mpp) {
+  const meters = 20;
+  const len = meters / mpp; // 像素
+  const mini = Math.min(m.W, m.H);
+  const y = m.H - mini * 0.05;
+  const x0 = mini * 0.04, x1 = x0 + len;
+  const fs = mini * 0.022;
+  return '<line class="scale-line" vector-effect="non-scaling-stroke" x1="' + x0 + '" y1="' + y + '" x2="' + x1 + '" y2="' + y + '"/>'
+    + '<line class="scale-tick" vector-effect="non-scaling-stroke" x1="' + x0 + '" y1="' + (y - mini * 0.006) + '" x2="' + x0 + '" y2="' + (y + mini * 0.006) + '"/>'
+    + '<line class="scale-tick" vector-effect="non-scaling-stroke" x1="' + x1 + '" y1="' + (y - mini * 0.006) + '" x2="' + x1 + '" y2="' + (y + mini * 0.006) + '"/>'
+    + '<text class="scale-label" x="' + ((x0 + x1) / 2) + '" y="' + (y - mini * 0.012) + '" font-size="' + fs + '" text-anchor="middle">' + meters + 'm</text>';
+}
+
+/* ===================== 启动 ===================== */
+buildChips();
+refreshChips();
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>minimap inspection</title>
+<style>
+  body { background:#111; color:#eee; font-family:sans-serif; padding:20px; }
+  h1 { font-size:16px; }
+  #readout { position:fixed; top:8px; right:12px; z-index:20; background:#000; color:#0f0; font-family:monospace; font-size:13px; padding:6px 10px; border:1px solid #0f0; }
+  .cell { margin:40px 0; }
+  .cap { font-size:15px; font-weight:bold; margin-bottom:8px; letter-spacing:1px; }
+  .frame { position:relative; display:inline-block; line-height:0; border:1px solid #555; }
+  .frame img { display:block; max-width:760px; height:auto; }
+  .grid { position:absolute; inset:0; pointer-events:none; }
+  .grid i { position:absolute; background:rgba(0,255,255,0.28); }
+  .grid i.v { top:0; bottom:0; width:1px; }
+  .grid i.h { left:0; right:0; height:1px; }
+  .grid i.major { background:rgba(255,255,0,0.45); }
+  .label { position:absolute; font-size:10px; color:#0ff; }
+</style>
+</head>
+<body>
+<h1>Inspect minimaps — 黄色实线=25% / 50% 中线，青色细线=5% 刻度。鼠标移动时右上角显示归一化坐标(0~1)。</h1>
+<div id="readout">x=—  y=—</div>
+<div id="root"></div>
+<script>
+  const maps = ['ascent','haven','bind','breeze','icebox','fracture','pearl','lotus','sunset','abyss','corrode','summit','split'];
+  const root = document.getElementById('root');
+  const readout = document.getElementById('readout');
+  maps.forEach(m => {
+    const cell = document.createElement('div'); cell.className='cell';
+    const cap = document.createElement('div'); cap.className='cap'; cap.textContent = m.toUpperCase();
+    const frame = document.createElement('div'); frame.className='frame';
+    const img = document.createElement('img'); img.src = 'assets/_crop/'+m+'.png';
+    const grid = document.createElement('div'); grid.className='grid';
+    let lines = '';
+    for (let i=1;i<20;i++){
+      const major = (i%5===0);
+      lines += '<i class="v '+(major?'major':'')+'" style="left:'+i*5+'%"></i><i class="h '+(major?'major':'')+'" style="top:'+i*5+'%"></i>';
+    }
+    grid.innerHTML = lines;
+    frame.appendChild(img); frame.appendChild(grid);
+    cell.appendChild(cap); cell.appendChild(frame);
+    root.appendChild(cell);
+
+    frame.addEventListener('mousemove', (e) => {
+      const r = frame.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width;
+      const y = (e.clientY - r.top) / r.height;
+      readout.textContent = m.toUpperCase() + '  x=' + x.toFixed(3) + '  y=' + y.toFixed(3);
+    });
+  });
+</script>
+</body>
+</html>
