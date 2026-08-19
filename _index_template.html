@@ -243,13 +243,13 @@ function tick(now) {
   draw();
 }
 
-/* ---- 真实 spike 图标（官方 wiki 高清 PNG，base64 内嵌） ----
+/* ---- 真实 spike 图标（拳头官方 Plant Plant 喷漆，俯拍视角 PNG，base64 内嵌） ----
    下包时显示真实 spike 装置 + 红色充能光晕 */
 function spikeMarkup(p, m, blastPx, rotating) {
   const mini = Math.min(m.W, m.H);
-  // spike 真实下包后视觉尺寸：约 7% 短边高
-  const h = mini * 0.07;
-  const w = h * 600/1065;
+  // Plant Plant 是 512×512 俯拍视角，正方形
+  const h = mini * 0.075;
+  const w = h;  // 1:1
   const x = p.x - w/2, y = p.y - h/2;
 
   // 红色充能/爆炸发光光晕（外层 filter）
