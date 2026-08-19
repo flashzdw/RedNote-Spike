@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>无畏契约 · 爆能器爆炸范围</title>
+<title>爆能器爆炸范围测算</title>
 <style>
   :root {
     --bg: #0f1923;
@@ -12,65 +12,40 @@
     --text: #ece8e1;
     --muted: #8fa0b0;
     --red: #ff4655;
-    --red2: #b32a37;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
     font: 14px/1.55 "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
-    color: var(--text);
-    background: var(--bg);
+    color: var(--text); background: var(--bg);
     -webkit-font-smoothing: antialiased;
   }
+
   .top {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 22px; border-bottom: 1px solid var(--line);
-    background: var(--bg2);
+    padding: 14px 18px; border-bottom: 1px solid var(--line); background: var(--bg2);
   }
-  .top h1 { font-size: 15px; font-weight: 900; letter-spacing: 2px; }
-  .top h1 .red { color: var(--red); }
-  .top .tag { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+  .top h1 { font-size: 16px; font-weight: 900; letter-spacing: 1px; }
 
-  .shell { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 49px); }
-  @media (max-width: 900px) { .shell { grid-template-columns: 1fr; } }
-
-  /* 左：地图选择 */
-  aside { border-right: 1px solid var(--line); background: var(--bg2); padding: 14px; overflow-y: auto; }
-  .group-label { font-size: 11px; color: var(--muted); letter-spacing: 2px; margin: 8px 0 10px; }
-  .maps { display: flex; flex-direction: column; gap: 4px; }
-  .m {
-    cursor: pointer; padding: 8px 10px; border: 1px solid transparent;
-    display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    transition: background .15s;
+  .chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 12px 18px; border-bottom: 1px solid var(--line); background: var(--bg2);
   }
-  .m:hover { background: rgba(255,255,255,0.03); }
-  .m.on { border-color: var(--red); background: rgba(255,70,85,0.08); }
-  .m .zh { font-weight: 700; }
-  .m .en { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
-  .m .dot { width: 6px; height: 6px; background: var(--line); }
-  .m.on .dot { background: var(--red); }
-
-  /* 右：主舞台 */
-  main { padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-
-  .meta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-  .meta h2 { font-size: 18px; font-weight: 900; }
-  .meta h2 .en { color: var(--muted); font-weight: 700; font-size: 13px; margin-left: 6px; letter-spacing: 1px; }
-  .meta .loc { color: var(--muted); font-size: 12px; }
-
-  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-
-  .sites { display: flex; gap: 6px; flex-wrap: wrap; }
-  .sbtn {
-    cursor: pointer; padding: 8px 14px; border: 1px solid var(--line); background: transparent;
-    color: var(--text); font-weight: 700; font-size: 13px; letter-spacing: 1px;
+  .chip {
+    cursor: pointer; padding: 4px 10px; border: 1px solid var(--line); background: transparent;
+    color: var(--text); font-weight: 700; font-size: 12px; letter-spacing: 1px;
   }
-  .sbtn:hover { border-color: var(--muted); }
-  .sbtn.on { background: var(--red); border-color: var(--red); color: #fff; }
+  .chip:hover { border-color: var(--muted); }
+  .chip.on { background: var(--red); border-color: var(--red); color: #fff; }
 
-  .actions { display: flex; gap: 8px; }
+  main { padding: 16px 18px 20px; max-width: 1280px; margin: 0 auto; }
+
+  .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .hint strong { color: var(--red); }
+
+  .actions { display: flex; gap: 8px; margin-left: auto; }
   .btn {
-    cursor: pointer; padding: 9px 16px; border: 1px solid var(--red); background: var(--red);
+    cursor: pointer; padding: 7px 14px; border: 1px solid var(--red); background: var(--red);
     color: #fff; font-weight: 800; font-size: 12px; letter-spacing: 2px;
   }
   .btn:hover { background: #ff5a68; }
@@ -78,31 +53,23 @@
   .btn.ghost { background: transparent; border-color: var(--line); color: var(--text); }
   .btn.ghost:hover { border-color: var(--muted); }
 
-  .status { font-size: 12px; color: var(--muted); min-height: 18px; }
-  .status strong { color: var(--red); }
-
-  /* 地图舞台 */
   .stage {
     position: relative; border: 1px solid var(--line); background: var(--bg2);
-    padding: 0; overflow: hidden; line-height: 0;
+    overflow: hidden; line-height: 0;
   }
   svg.map { display: block; width: 100%; height: auto; }
 
   .zone-poly {
     fill: rgba(255, 200, 60, 0.10);
-    stroke: rgba(255, 200, 60, 0.85);
+    stroke: rgba(255, 200, 60, 0.9);
     stroke-width: 1.5; stroke-dasharray: 4 3;
     cursor: crosshair; transition: fill .15s;
   }
-  .zone-poly:hover { fill: rgba(255, 200, 60, 0.25); }
-  .zone-on { fill: rgba(255, 70, 85, 0.22); stroke: var(--red); }
-  .site-letter {
-    fill: #fff; font-weight: 900; paint-order: stroke;
-    stroke: rgba(0,0,0,0.6); stroke-width: 2.5; pointer-events: none;
-  }
+  .zone-poly:hover { fill: rgba(255, 200, 60, 0.30); }
 
   .explode-fill { fill: rgba(0,0,0,0.5); }
   .explode-ring { fill: none; stroke: var(--red); stroke-width: 2.5; }
+  .ring { fill: none; stroke: var(--red); stroke-width: 1.5; }
   .radius-line { stroke: #fff; stroke-width: 1.4; stroke-dasharray: 4 3; }
   .radius-label {
     fill: var(--red); font-weight: 900; paint-order: stroke;
@@ -112,67 +79,34 @@
   .scale-line { stroke-width: 1.4; }
   .scale-tick { stroke-width: 1.2; }
   .scale-label { fill: rgba(255,255,255,0.85); font-weight: 700; }
-
-  /* 底部数据 */
-  .stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-  @media (max-width: 700px) { .stats { grid-template-columns: repeat(3, 1fr); } }
-  .st { border: 1px solid var(--line); padding: 10px 12px; }
-  .st .v { font-size: 18px; font-weight: 900; }
-  .st .v em { font-style: normal; font-size: 11px; color: var(--red); margin-left: 2px; }
-  .st .k { font-size: 11px; color: var(--muted); margin-top: 3px; }
-  .st.hl { border-color: var(--red); }
-  .st.hl .v { color: var(--red); }
 </style>
 </head>
 <body>
 
 <header class="top">
-  <h1>VALORANT <span class="red">SPIKE</span> · 爆炸范围测算</h1>
-  <span class="tag">官方数据 · 13 张地图</span>
+  <h1>爆能器爆炸范围测算</h1>
 </header>
 
-<div class="shell">
-  <aside>
-    <div class="group-label">选择地图</div>
-    <div class="maps" id="mapChips"></div>
-  </aside>
+<div class="chips" id="mapChips"></div>
 
-  <main>
-    <div class="meta">
-      <h2 id="mapZh">—<span class="en" id="mapEn"></span></h2>
-      <span class="loc" id="mapLoc"></span>
+<main>
+  <div class="bar">
+    <span class="hint" id="hint">在下方地图的 <strong>黄色包点区域</strong>内任意位置点击选择下包点</span>
+    <div class="actions">
+      <button class="btn" id="btnSim" disabled>模拟爆炸</button>
+      <button class="btn ghost" id="btnReset">重置</button>
     </div>
+  </div>
 
-    <div class="row">
-      <div class="sites" id="sites"></div>
-      <div class="actions">
-        <button class="btn" id="btnSim" disabled>模拟爆炸</button>
-        <button class="btn ghost" id="btnReset">重置</button>
-      </div>
-    </div>
-
-    <div class="status" id="status">请先选择地图与下包点</div>
-
-    <div class="stage">
-      <svg class="map" id="map"></svg>
-    </div>
-
-    <div class="stats">
-      <div class="st hl"><div class="v">35<em>m</em></div><div class="k">爆炸半径</div></div>
-      <div class="st hl"><div class="v">999<em>伤</em></div><div class="k">即死</div></div>
-      <div class="st"><div class="v">45<em>s</em></div><div class="k">充能</div></div>
-      <div class="st"><div class="v">4<em>s</em></div><div class="k">安装</div></div>
-      <div class="st"><div class="v">7<em>s</em></div><div class="k">拆除</div></div>
-      <div class="st"><div class="v">7<em>s</em></div><div class="k">提示</div></div>
-    </div>
-  </main>
-</div>
+  <div class="stage">
+    <svg class="map" id="map"></svg>
+  </div>
+</main>
 
 <script>
 "use strict";
 
-/* ===== 工具 ===== */
-function polyStr(arr){ return arr.map(p => p[0]+","+p[1]).join(" "); }
+function polyStr(arr){ return arr.map(p => p[0].toFixed(1)+","+p[1].toFixed(1)).join(" "); }
 function inPoly(px, py, poly) {
   let inside = false;
   for (let i=0, j=poly.length-1; i<poly.length; j=i++) {
@@ -182,148 +116,98 @@ function inPoly(px, py, poly) {
   return inside;
 }
 
-/* ===== 地图数据 ===== */
-const BLAST_R = 35; // 官方爆炸半径（米）
+const BLAST_R = 35;
 
 const MAPS = [
-  { id:"ascent",   zh:"亚海悬城", en:"Ascent",   loc:"意大利·威尼斯",   W:1900, H:1780, worldW:92, img:"{{IMG_ascent}}",   sites:{{SITES_ascent}} },
-  { id:"bind",     zh:"源工重镇", en:"Bind",     loc:"摩洛哥·拉巴特",   W:1838, H:1937, worldW:92, img:"{{IMG_bind}}",     sites:{{SITES_bind}} },
-  { id:"split",    zh:"霓虹町",   en:"Split",    loc:"日本·东京",       W:1788, H:1901, worldW:82, img:"{{IMG_split}}",    sites:{{SITES_split}} },
-  { id:"haven",    zh:"隐世修所", en:"Haven",    loc:"不丹·廷布",       W:1913, H:1717, worldW:130,img:"{{IMG_haven}}",    sites:{{SITES_haven}} },
-  { id:"icebox",   zh:"极地寒港", en:"Icebox",   loc:"俄罗斯·本内特岛", W:1920, H:1694, worldW:112,img:"{{IMG_icebox}}",   sites:{{SITES_icebox}} },
-  { id:"breeze",   zh:"微风岛屿", en:"Breeze",   loc:"百慕大三角",      W:960,  H:942,  worldW:150,img:"{{IMG_breeze}}",   sites:{{SITES_breeze}} },
-  { id:"fracture", zh:"裂变峡谷", en:"Fracture", loc:"美国·新墨西哥",   W:1850, H:1762, worldW:120,img:"{{IMG_fracture}}", sites:{{SITES_fracture}} },
-  { id:"pearl",    zh:"深海明珠", en:"Pearl",    loc:"葡萄牙·里斯本",   W:1016, H:950,  worldW:105,img:"{{IMG_pearl}}",    sites:{{SITES_pearl}} },
-  { id:"lotus",    zh:"莲华古城", en:"Lotus",    loc:"印度·西高止山脉", W:898,  H:798,  worldW:140,img:"{{IMG_lotus}}",    sites:{{SITES_lotus}} },
-  { id:"sunset",   zh:"日落之城", en:"Sunset",   loc:"美国·洛杉矶",     W:1897, H:2006, worldW:95, img:"{{IMG_sunset}}",   sites:{{SITES_sunset}} },
-  { id:"abyss",    zh:"深渊",     en:"Abyss",    loc:"挪威·扬马延岛",   W:962,  H:997,  worldW:118,img:"{{IMG_abyss}}",    sites:{{SITES_abyss}} },
-  { id:"corrode",  zh:"盐海矿镇", en:"Corrode",  loc:"法国·圣米歇尔山", W:1953, H:1724, worldW:100,img:"{{IMG_corrode}}",  sites:{{SITES_corrode}} },
-  { id:"summit",   zh:"天枢云阙", en:"Summit",   loc:"中国·张家界",     W:1962, H:1976, worldW:98, img:"{{IMG_summit}}",   sites:{{SITES_summit}} },
+  { id:"ascent",   zh:"亚海悬城", W:1900, H:1780, worldW:92, img:"{{IMG_ascent}}",   sites:{{SITES_ascent}} },
+  { id:"bind",     zh:"源工重镇", W:1838, H:1937, worldW:92, img:"{{IMG_bind}}",     sites:{{SITES_bind}} },
+  { id:"split",    zh:"霓虹町",   W:1788, H:1901, worldW:82, img:"{{IMG_split}}",    sites:{{SITES_split}} },
+  { id:"haven",    zh:"隐世修所", W:1913, H:1717, worldW:130,img:"{{IMG_haven}}",    sites:{{SITES_haven}} },
+  { id:"icebox",   zh:"极地寒港", W:1920, H:1694, worldW:112,img:"{{IMG_icebox}}",   sites:{{SITES_icebox}} },
+  { id:"breeze",   zh:"微风岛屿", W:960,  H:942,  worldW:150,img:"{{IMG_breeze}}",   sites:{{SITES_breeze}} },
+  { id:"fracture", zh:"裂变峡谷", W:1850, H:1762, worldW:120,img:"{{IMG_fracture}}", sites:{{SITES_fracture}} },
+  { id:"pearl",    zh:"深海明珠", W:1016, H:950,  worldW:105,img:"{{IMG_pearl}}",    sites:{{SITES_pearl}} },
+  { id:"lotus",    zh:"莲华古城", W:898,  H:798,  worldW:140,img:"{{IMG_lotus}}",    sites:{{SITES_lotus}} },
+  { id:"sunset",   zh:"日落之城", W:1897, H:2006, worldW:95, img:"{{IMG_sunset}}",   sites:{{SITES_sunset}} },
+  { id:"abyss",    zh:"深渊",     W:962,  H:997,  worldW:118,img:"{{IMG_abyss}}",    sites:{{SITES_abyss}} },
+  { id:"corrode",  zh:"盐海矿镇", W:1953, H:1724, worldW:100,img:"{{IMG_corrode}}",  sites:{{SITES_corrode}} },
+  { id:"summit",   zh:"天枢云阙", W:1962, H:1976, worldW:98, img:"{{IMG_summit}}",   sites:{{SITES_summit}} },
 ];
 
-/* ===== DOM ===== */
 const svg = document.getElementById("map");
-const statusEl = document.getElementById("status");
+const chipsWrap = document.getElementById("mapChips");
+const hintEl = document.getElementById("hint");
 const btnSim = document.getElementById("btnSim");
 const btnReset = document.getElementById("btnReset");
-const chipsWrap = document.getElementById("mapChips");
-const sitesWrap = document.getElementById("sites");
-const mapZh = document.getElementById("mapZh");
-const mapEn = document.getElementById("mapEn");
-const mapLoc = document.getElementById("mapLoc");
 
 const state = {
   map: MAPS[0],
-  siteIdx: -1,    // 当前选中的包点 index
-  phase: "idle",  // idle | animating | done
+  plant: null,    // {x,y} 像素坐标（任意包点内）
+  phase: "idle",  // idle | anim | done
   t0: 0,
   raf: 0,
 };
 
-/* ===== 列表 ===== */
 function buildChips() {
   chipsWrap.innerHTML = "";
   MAPS.forEach((m, i) => {
-    const el = document.createElement("div");
-    el.className = "m";
-    el.innerHTML = '<span class="zh">'+m.zh+' <span class="en">'+m.en.toUpperCase()+'</span></span><span class="dot"></span>';
-    el.addEventListener("click", () => selectMap(i));
-    chipsWrap.appendChild(el);
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.textContent = m.zh;
+    b.addEventListener("click", () => selectMap(i));
+    chipsWrap.appendChild(b);
   });
 }
 function refreshChips() {
   [...chipsWrap.children].forEach((el, i) => el.classList.toggle("on", i === MAPS.indexOf(state.map)));
 }
-function buildSiteBtns() {
-  sitesWrap.innerHTML = "";
-  state.map.sites.forEach((s, i) => {
-    const b = document.createElement("button");
-    b.className = "sbtn";
-    b.textContent = s.s + " 区";
-    b.addEventListener("click", () => selectSite(i));
-    sitesWrap.appendChild(b);
-  });
-}
-function refreshSiteBtns() {
-  [...sitesWrap.children].forEach((el, i) => el.classList.toggle("on", i === state.siteIdx));
-}
-
 function selectMap(i) {
   cancelSim();
   state.map = MAPS[i];
-  state.siteIdx = -1;
+  state.plant = null;
   state.phase = "idle";
   refreshChips();
-  mapZh.firstChild.nodeValue = state.map.zh;
-  mapEn.textContent = state.map.en.toUpperCase();
-  mapLoc.textContent = state.map.loc;
-  setStatus("请选择下包点（" + state.map.sites.map(s=>s.s).join(" / ") + "）");
+  hintEl.innerHTML = '在下方地图的 <strong>黄色包点区域</strong>内任意位置点击选择下包点';
   btnSim.disabled = true;
-  buildSiteBtns();
   draw();
-}
-function selectSite(i) {
-  cancelSim();
-  state.siteIdx = i;
-  state.phase = "idle";
-  refreshSiteBtns();
-  setStatus("已选 <strong>" + state.map.sites[i].s + " 区</strong>，点击「模拟爆炸」查看 35m 范围");
-  btnSim.disabled = false;
-  draw();
-}
-
-function setStatus(html) { statusEl.innerHTML = html; }
-
-/* ===== 按钮 ===== */
-btnSim.addEventListener("click", () => {
-  if (state.siteIdx < 0) return;
-  startSim();
-});
-btnReset.addEventListener("click", () => {
-  cancelSim();
-  state.siteIdx = -1;
-  state.phase = "idle";
-  refreshSiteBtns();
-  btnSim.disabled = true;
-  setStatus("请选择下包点（" + state.map.sites.map(s=>s.s).join(" / ") + "）");
-  draw();
-});
-
-/* ===== 模拟动画 ===== */
-function startSim() {
-  cancelSim();
-  state.phase = "animating";
-  state.t0 = performance.now();
-  state.raf = requestAnimationFrame(tick);
 }
 function cancelSim() {
   if (state.raf) { cancelAnimationFrame(state.raf); state.raf = 0; }
   state.phase = "idle";
 }
+
+btnSim.addEventListener("click", () => {
+  if (!state.plant) return;
+  startSim();
+});
+btnReset.addEventListener("click", () => {
+  cancelSim();
+  state.plant = null;
+  state.phase = "idle";
+  hintEl.innerHTML = '在下方地图的 <strong>黄色包点区域</strong>内任意位置点击选择下包点';
+  btnSim.disabled = true;
+  draw();
+});
+
+function startSim() {
+  cancelSim();
+  state.phase = "anim";
+  state.t0 = performance.now();
+  state.raf = requestAnimationFrame(tick);
+}
 function tick(now) {
   const t = now - state.t0;
-  if (t < 6000) {
-    if (t < 500) setStatus("正在安装爆能器（4s）…");
-    else if (t < 4000) {
-      const remain = Math.ceil(45 - (t-500)/3500*38);
-      setStatus("充能中 · 剩余 <strong>"+remain+"s</strong>");
-    } else if (t < 5000) {
-      const r = Math.max(0, Math.ceil(7 - (t-4000)/1000*7));
-      setStatus("即将引爆 · 剩余 <strong>"+r+"s</strong>");
-    } else {
-      setStatus("引爆！黑色球形冲击波扩张中…");
-    }
+  if (t < 1200) {                 // 充能 0.8s
     state.raf = requestAnimationFrame(tick);
   } else {
     state.phase = "done";
-    setStatus("爆炸完成 · <strong>35m</strong> 范围内 <strong>999</strong> 伤害即死（不分阵营）");
+    state.raf = 0;
+    hintEl.innerHTML = '爆炸完成 · <strong>35m</strong> 半径 · <strong>999</strong> 即死';
   }
   draw();
 }
 
-/* ===== 渲染 ===== */
-function siteCenterPx(s, m) { return { x: s.nCx*m.W, y: s.nCy*m.H }; }
-function sitePolyPx(s, m)    { return s.poly_n.map(p => [p[0]*m.W, p[1]*m.H]); }
+function sitePolyPx(s, m){ return s.poly_n.map(p => [p[0]*m.W, p[1]*m.H]); }
 
 function draw() {
   const m = state.map;
@@ -338,72 +222,33 @@ function draw() {
   s += '<image href="'+m.img+'" x="0" y="0" width="'+W+'" height="'+H+'"/>';
 
   // 包点（多边形）
-  m.sites.forEach((site, i) => {
-    const poly = sitePolyPx(site, m);
-    const cls = "zone-poly" + (i === state.siteIdx ? " zone-on" : "");
-    s += '<polygon class="'+cls+'" vector-effect="non-scaling-stroke" points="'+polyStr(poly)+'" data-i="'+i+'"/>';
-  });
-  // 字母标记
   m.sites.forEach(site => {
-    const cx = site.nCx*W, cy = site.nCy*H;
-    const fs = Math.min(W, H) * 0.05;
-    s += '<text class="site-letter" x="'+cx+'" y="'+(cy+fs*0.36)+'" font-size="'+fs+'" text-anchor="middle">'+site.s+'</text>';
+    s += '<polygon class="zone-poly" vector-effect="non-scaling-stroke" points="'+polyStr(sitePolyPx(site, m))+'"/>';
   });
 
-  // 安装点（已选包点中心）
-  if (state.siteIdx >= 0) {
-    const p = siteCenterPx(m.sites[state.siteIdx], m);
+  // 下包点（红色三角 + 充能圈）
+  if (state.plant) {
+    const p = state.plant;
     const sz = Math.min(W, H) * 0.02;
-    s += '<g>'
-      + '<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(sz*3.2)+'" fill="rgba(255,70,85,0.25)"/>'
-      + '<polygon transform="translate('+p.x+','+p.y+')" points="0,'+(-sz)+' '+(-sz*0.82)+','+(sz*0.74)+' '+(sz*0.82)+','+(sz*0.74)+'" fill="#ff4655" stroke="#fff" stroke-width="0.5" vector-effect="non-scaling-stroke"/>'
-      + '</g>';
-    if (state.phase === "animating") s += animMarkup(p, m, blastPx);
+    s += '<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(sz*3.2)+'" fill="rgba(255,70,85,0.25)"/>'
+       + '<polygon transform="translate('+p.x+','+p.y+')" points="0,'+(-sz)+' '+(-sz*0.82)+','+(sz*0.74)+' '+(sz*0.82)+','+(sz*0.74)+'" fill="#ff4655" stroke="#fff" stroke-width="0.5" vector-effect="non-scaling-stroke"/>';
+
+    if (state.phase === "anim") {
+      const t = performance.now() - state.t0;
+      const k = Math.min(1, t / 800);
+      const r = k * (sz*4);  // 充能圈
+      s += '<circle class="ring" cx="'+p.x+'" cy="'+p.y+'" r="'+r+'" vector-effect="non-scaling-stroke"/>';
+    }
     if (state.phase === "done") s += doneMarkup(p, m, blastPx);
   }
 
   s += scaleBar(m, mpp);
   svg.innerHTML = s;
-
-  // 给多边形加点击切换
-  svg.querySelectorAll(".zone-poly").forEach(el => {
-    el.addEventListener("click", () => selectSite(parseInt(el.getAttribute("data-i"), 10)));
-  });
-}
-
-function animMarkup(p, m, blastPx) {
-  const t = performance.now() - state.t0;
-  const mini = Math.min(m.W, m.H);
-  let s = "";
-  if (t >= 500 && t < 4000) {
-    const remain = 45 - (t-500)/3500*38;
-    const period = 80 + remain*20;
-    const ph = ((t-500) % period) / period;
-    const r = mini*0.02*(1+ph*1.6);
-    s += '<circle cx="'+p.x+'" cy="'+p.y+'" r="'+r+'" fill="none" stroke="rgba(255,70,85,'+(0.9-ph*0.6)+')" stroke-width="1.5" vector-effect="non-scaling-stroke"/>';
-  }
-  if (t >= 4000 && t < 5000) {
-    const r7 = 7 - (t-4000)/1000*7;
-    const r = Math.max(0.5, r7/7*(mini*0.32));
-    s += '<circle cx="'+p.x+'" cy="'+p.y+'" r="'+r+'" fill="none" stroke="rgba(236,232,225,0.9)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>';
-  }
-  if (t >= 5000 && t < 5800) {
-    const k = (t-5000)/800;
-    const r = k*blastPx;
-    s += '<circle class="explode-fill" cx="'+p.x+'" cy="'+p.y+'" r="'+r+'"/>'
-       + '<circle class="explode-ring" vector-effect="non-scaling-stroke" cx="'+p.x+'" cy="'+p.y+'" r="'+r+'"/>';
-  }
-  if (t >= 5800) {
-    const fs = mini*0.07;
-    s += '<text class="radius-label" x="'+p.x+'" y="'+p.y+'" font-size="'+fs+'" text-anchor="middle">999</text>';
-  }
-  return s;
 }
 
 function doneMarkup(p, m, blastPx) {
   let s = '<circle class="explode-fill" cx="'+p.x+'" cy="'+p.y+'" r="'+blastPx+'"/>'
         + '<circle class="explode-ring" vector-effect="non-scaling-stroke" cx="'+p.x+'" cy="'+p.y+'" r="'+blastPx+'"/>';
-  // 选一个落在图内的方向画半径
   const dirs = [[0,-1],[0,1],[1,0],[-1,0]];
   let dir = [1,0];
   for (const d of dirs) {
@@ -414,7 +259,7 @@ function doneMarkup(p, m, blastPx) {
   s += '<line class="radius-line" vector-effect="non-scaling-stroke" x1="'+p.x+'" y1="'+p.y+'" x2="'+ex+'" y2="'+ey+'"/>';
   const lx = p.x+dir[0]*blastPx*0.5, ly = p.y+dir[1]*blastPx*0.5;
   const fs = Math.min(m.W, m.H) * 0.027;
-  s += '<text class="radius-label" x="'+lx+'" y="'+ly+'" font-size="'+fs+'" text-anchor="middle">35m · 999</text>';
+  s += '<text class="radius-label" x="'+lx+'" y="'+ly+'" font-size="'+fs+'" text-anchor="middle">35m</text>';
   return s;
 }
 
@@ -430,6 +275,29 @@ function scaleBar(m, mpp) {
     + '<line class="scale-tick" vector-effect="non-scaling-stroke" x1="'+x1+'" y1="'+(y-mini*0.006)+'" x2="'+x1+'" y2="'+(y+mini*0.006)+'"/>'
     + '<text class="scale-label" x="'+((x0+x1)/2)+'" y="'+(y-mini*0.012)+'" font-size="'+fs+'" text-anchor="middle">'+meters+'m</text>';
 }
+
+/* ===== 点击包点任意位置下包 ===== */
+svg.addEventListener("click", (e) => {
+  if (state.phase === "anim") return;
+  const m = state.map;
+  const rect = svg.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width * m.W;
+  const y = (e.clientY - rect.top) / rect.height * m.H;
+  // 命中任意包点？
+  let hit = false;
+  for (const site of m.sites) {
+    if (inPoly(x, y, sitePolyPx(site, m))) { hit = true; break; }
+  }
+  if (!hit) {
+    hintEl.innerHTML = '请在 <strong>黄色包点区域</strong>内点击';
+    return;
+  }
+  state.plant = { x, y };
+  state.phase = "idle";
+  btnSim.disabled = false;
+  hintEl.innerHTML = '已选下包点 · 点击 <strong>模拟爆炸</strong> 查看 35m 范围';
+  draw();
+});
 
 /* ===== 启动 ===== */
 buildChips();
